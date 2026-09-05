@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/automation-run-events", () => ({
-  verifyInternalServiceSecret: vi.fn(),
   recordAutomationRunEvent: vi.fn(),
   AutomationRunEventError: class AutomationRunEventError extends Error {
     code: string;
@@ -11,9 +10,17 @@ vi.mock("@/lib/automation-run-events", () => ({
     }
   },
 }));
+vi.mock("@/lib/internal-service-auth", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/internal-service-auth")>(
+    "@/lib/internal-service-auth",
+  );
+  return { ...actual, verifyInternalServiceSecret: vi.fn() };
+});
 
-const { verifyInternalServiceSecret, recordAutomationRunEvent, AutomationRunEventError } =
-  await import("@/lib/automation-run-events");
+const { recordAutomationRunEvent, AutomationRunEventError } = await import(
+  "@/lib/automation-run-events"
+);
+const { verifyInternalServiceSecret } = await import("@/lib/internal-service-auth");
 const { POST } = await import("./route");
 
 const RUN_ID = "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d";

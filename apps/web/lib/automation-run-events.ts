@@ -3,7 +3,6 @@ import { automationRunEvents, automationRuns, notifications } from "@local-seo/d
 import { createLogger } from "@local-seo/logger";
 import type { AutomationRunEventRequest } from "@local-seo/schemas";
 import { eq } from "drizzle-orm";
-import { timingSafeEqual } from "node:crypto";
 
 const logger = createLogger({ module: "automation-run-events" });
 
@@ -15,22 +14,6 @@ export class AutomationRunEventError extends Error {
     super(message);
     this.name = "AutomationRunEventError";
   }
-}
-
-/**
- * Constant-time comparison against N8N_INTERNAL_SECRET (docs/security.md:
- * "Use authentication on internal callbacks"). Returns false (never
- * throws) when the secret isn't configured, so a misconfigured deployment
- * fails closed instead of accepting every request.
- */
-export function verifyInternalServiceSecret(providedSecret: string | null): boolean {
-  const expected = process.env.N8N_INTERNAL_SECRET;
-  if (!expected || !providedSecret) return false;
-
-  const expectedBuf = Buffer.from(expected);
-  const providedBuf = Buffer.from(providedSecret);
-  if (expectedBuf.length !== providedBuf.length) return false;
-  return timingSafeEqual(expectedBuf, providedBuf);
 }
 
 const EVENT_TO_STATUS = {

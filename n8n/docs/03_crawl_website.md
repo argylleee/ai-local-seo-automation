@@ -23,9 +23,10 @@ day to day the way Search Console metrics do.
 1. **Schedule Trigger** — weekly cron.
 2. **HTTP Request** — `POST <APP_URL>/api/internal/businesses/{{businessId}}/website-audit`
    Header: `x-internal-secret: {{$env.N8N_INTERNAL_SECRET}}`
-   *(this endpoint doesn't exist yet — see `00_overview.md`'s "Gap"
-   section; it would be a thin wrapper around the already-built
-   `lib/website-audit-sync.ts::runWebsiteAudit`)*
+   Response on success: `{ auditId, issueCount, recommendationCount }`.
+   Response on failure: `{ error: { code, message } }` with status 404
+   (`BUSINESS_NOT_FOUND`), 422 (`NO_WEBSITE` / `CRAWL_DISALLOWED`), or
+   502 (`CRAWL_FAILED`).
 3. **IF** — branch on HTTP status, same pattern as workflow #1:
    - 2xx → success notification with `issueCount` / `recommendationCount`.
    - non-2xx → failure notification with the error body's `code`/`message`.

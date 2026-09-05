@@ -1,16 +1,11 @@
-import {
-  AutomationRunEventError,
-  recordAutomationRunEvent,
-  verifyInternalServiceSecret,
-} from "@/lib/automation-run-events";
+import { AutomationRunEventError, recordAutomationRunEvent } from "@/lib/automation-run-events";
+import { UUID_RE, verifyInternalServiceSecret } from "@/lib/internal-service-auth";
 import { apiErrorSchema, automationRunEventRequestSchema } from "@local-seo/schemas";
 import { NextResponse } from "next/server";
 
 function errorResponse(code: string, message: string, status: number) {
   return NextResponse.json(apiErrorSchema.parse({ error: { code, message } }), { status });
 }
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * POST /api/internal/automation-runs/:id/events — docs/api-contracts.md.

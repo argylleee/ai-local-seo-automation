@@ -25,7 +25,9 @@ the data changes; don't schedule it hourly.
 1. **Schedule Trigger** — daily cron, see above.
 2. **HTTP Request** — `POST <APP_URL>/api/internal/businesses/{{businessId}}/search-console-sync`
    Header: `x-internal-secret: {{$env.N8N_INTERNAL_SECRET}}`
-   *(this endpoint doesn't exist yet — see `00_overview.md`'s "Gap" section)*
+   Response on success: `{ auditId, issueCount, rowCount, recommendationCount }`.
+   Response on failure: `{ error: { code, message } }` with status 404
+   (`BUSINESS_NOT_FOUND`), 409 (`NOT_CONNECTED`), or 422 (`SITE_NOT_MATCHED`).
 3. **IF** — branch on HTTP status:
    - 2xx → **success path**: optionally a Slack/email node summarizing
      `issueCount` / `recommendationCount` from the response body.

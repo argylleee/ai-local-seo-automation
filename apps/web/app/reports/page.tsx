@@ -1,9 +1,10 @@
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { auth } from "@/lib/auth";
+import { getReportSummary } from "@/lib/report-summary";
 import { db } from "@local-seo/db";
-import { businesses, recommendations, seoAudits, seoIssues } from "@local-seo/db/schema";
-import { and, desc, eq } from "drizzle-orm";
+import { businesses } from "@local-seo/db/schema";
+import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -45,34 +46,9 @@ export default async function ReportsPage({
   const selected =
     orgBusinesses.find((business) => business.id === requestedBusinessId) ?? orgBusinesses[0]!;
 
-  const scoreHistory = await db
-    .select({
-      score: seoAudits.score,
-      completedAt: seoAudits.completedAt,
-      source: seoAudits.source,
-    })
-    .from(seoAudits)
-    .where(and(eq(seoAudits.businessId, selected.id), eq(seoAudits.status, "completed")))
-    .orderBy(desc(seoAudits.completedAt))
-    .limit(10);
-
-  const openIssues = await db
-    .select({ category: seoIssues.category })
-    .from(seoIssues)
-    .innerJoin(seoAudits, eq(seoAudits.id, seoIssues.auditId))
-    .where(and(eq(seoAudits.businessId, selected.id), eq(seoIssues.status, "open")));
-
-  const issuesByCategory = new Map<string, number>();
-  for (const row of openIssues) {
-    issuesByCategory.set(row.category, (issuesByCategory.get(row.category) ?? 0) + 1);
-  }
-
-  const recRows = await db
-    .select({ status: recommendations.status })
-    .from(recommendations)
-    .where(eq(recommendations.businessId, selected.id));
-  const recCounts = { pending: 0, approved: 0, rejected: 0, completed: 0 };
-  for (const row of recRows) recCounts[row.status] += 1;
+  const { scoreHistory, issuesByCategory, recommendationCounts: recCounts } =
+    await getReportSummary(selected.id);
+  const issuesByCategoryEntries = Object.entries(issuesByCategory);
 
   return (
     <AppShell>
@@ -136,11 +112,11 @@ export default async function ReportsPage({
               <CardTitle>Open issues by category</CardTitle>
             </CardHeader>
             <CardContent className="text-sm">
-              {issuesByCategory.size === 0 ? (
+              {issuesByCategoryEntries.length === 0 ? (
                 <p className="text-muted-foreground">No open issues.</p>
               ) : (
                 <ul className="space-y-1">
-                  {[...issuesByCategory.entries()].map(([category, count]) => (
+                  {issuesByCategoryEntries.map(([category, count]) => (
                     <li key={category} className="text-muted-foreground">
                       {category.replaceAll("_", " ").toLowerCase()}:{" "}
                       <span className="text-foreground">{count}</span>

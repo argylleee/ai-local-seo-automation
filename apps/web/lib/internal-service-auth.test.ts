@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { verifyInternalServiceSecret } from "./automation-run-events";
+import { verifyInternalServiceSecret } from "./internal-service-auth";
 
 describe("verifyInternalServiceSecret", () => {
   afterEach(() => {

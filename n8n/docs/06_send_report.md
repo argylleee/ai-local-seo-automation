@@ -26,9 +26,9 @@ repeat itself; monthly is a reasonable default).
 1. **Schedule Trigger.**
 2. **HTTP Request** — `GET <APP_URL>/api/internal/businesses/{{businessId}}/report-summary`
    Header: `x-internal-secret: {{$env.N8N_INTERNAL_SECRET}}`
-   *(new endpoint, not built — a read-only wrapper around the same
-   queries `app/reports/page.tsx` already runs: score history, open
-   issues by category, recommendation status breakdown)*
+   Response: `{ business: { id, name }, scoreHistory, issuesByCategory, recommendationCounts }`
+   — the same data `app/reports/page.tsx` shows, via the shared
+   `lib/report-summary.ts` helper so the two never drift apart.
 3. **Set/Code node** — format the JSON response into an email body
    (n8n's expression editor is enough for a simple text/HTML summary;
    no templating library needed).
