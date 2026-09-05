@@ -1,4 +1,4 @@
-import { index, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { index, pgEnum, pgTable, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
 import { integrations } from "./integrations";
 import { organizations, users } from "./organizations";
 
@@ -32,6 +32,25 @@ export const automationRuns = pgTable(
   (t) => [
     index("automation_runs_organization_id_idx").on(t.organizationId),
     index("automation_runs_correlation_id_idx").on(t.correlationId),
+  ],
+);
+
+// Replay protection for POST /api/internal/automation-runs/:id/events
+// (docs/api-contracts.md, docs/security.md) — one row per (run, idempotency
+// key) pair. A retried event with a key already recorded here is a no-op.
+export const automationRunEvents = pgTable(
+  "automation_run_events",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    automationRunId: uuid("automation_run_id")
+      .notNull()
+      .references(() => automationRuns.id, { onDelete: "cascade" }),
+    idempotencyKey: text("idempotency_key").notNull(),
+    eventType: text("event_type").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique("automation_run_events_run_id_key_unique").on(t.automationRunId, t.idempotencyKey),
   ],
 );
 

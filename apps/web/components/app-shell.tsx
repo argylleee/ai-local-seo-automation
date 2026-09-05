@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
+import { NotificationBell } from "./notification-bell";
 
 // Primary navigation per docs/design.md, in the documented order.
 // "Integrations" isn't a separate page — it's covered by Settings.
@@ -45,6 +46,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               </Link>
             );
           })}
+          <NotificationBell />
         </nav>
       </header>
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">{children}</main>

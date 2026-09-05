@@ -2,7 +2,14 @@ import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { auth } from "@/lib/auth";
 import { db } from "@local-seo/db";
-import { businesses, reviewAnalysis, reviews, seoAudits, seoIssues } from "@local-seo/db/schema";
+import {
+  automationRuns,
+  businesses,
+  reviewAnalysis,
+  reviews,
+  seoAudits,
+  seoIssues,
+} from "@local-seo/db/schema";
 import { SEVERITY_PENALTY } from "@local-seo/seo-engine";
 import { and, desc, eq } from "drizzle-orm";
 import Link from "next/link";
@@ -13,6 +20,17 @@ const SEVERITY_LABEL: Record<string, string> = {
   high: "High",
   medium: "Medium",
   low: "Low",
+};
+
+const RUN_STATUS_LABEL: Record<string, string> = {
+  started: "Running",
+  succeeded: "Succeeded",
+  failed: "Failed",
+};
+
+const RUN_WORKFLOW_LABEL: Record<string, string> = {
+  google_search_console: "Search Console sync",
+  crawler: "Website audit",
 };
 
 export default async function DashboardPage({
@@ -81,6 +99,13 @@ export default async function DashboardPage({
   for (const row of businessReviews) {
     sentimentCounts[row.sentiment] += 1;
   }
+
+  const recentRuns = await db
+    .select()
+    .from(automationRuns)
+    .where(eq(automationRuns.organizationId, session.organizationId))
+    .orderBy(desc(automationRuns.startedAt))
+    .limit(5);
 
   return (
     <AppShell>
@@ -173,7 +198,26 @@ export default async function DashboardPage({
             <CardTitle>Recent automation runs</CardTitle>
           </CardHeader>
           <CardContent className="text-muted-foreground text-sm">
-            No automation runs recorded yet.
+            {recentRuns.length === 0 ? (
+              <p>No automation runs recorded yet.</p>
+            ) : (
+              <ul className="space-y-2">
+                {recentRuns.map((run) => (
+                  <li key={run.id} className="flex items-center justify-between gap-4">
+                    <span className="text-foreground">
+                      {RUN_WORKFLOW_LABEL[run.workflowName] ?? run.workflowName}
+                    </span>
+                    <span>
+                      {RUN_STATUS_LABEL[run.status] ?? run.status} ·{" "}
+                      {run.startedAt.toLocaleString("en-PH", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      })}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </CardContent>
         </Card>
       </div>

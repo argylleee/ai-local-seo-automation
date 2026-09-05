@@ -1,6 +1,12 @@
 import { generateRecommendation } from "@local-seo/ai";
 import { db } from "@local-seo/db";
-import { recommendations, seoAudits, seoIssues } from "@local-seo/db/schema";
+import {
+  automationRuns,
+  notifications,
+  recommendations,
+  seoAudits,
+  seoIssues,
+} from "@local-seo/db/schema";
 import { SEVERITY_PENALTY, type SeoIssueCandidate } from "@local-seo/seo-engine";
 import { eq } from "drizzle-orm";
 
@@ -16,7 +22,13 @@ const PRIORITY_TO_IMPACT: Record<string, "low" | "medium" | "high"> = {
 // limits even as the rule set grows.
 const MAX_RECOMMENDATIONS_PER_AUDIT = 5;
 
-/** Inserts a new "running" audit row. Shared by every audit source (Search Console, crawler). */
+/**
+ * Inserts a new "running" audit row, plus a matching automation_runs row
+ * (correlated by the audit's own ID) so both sync jobs show up in the
+ * Dashboard's "Recent automation runs" card and the internal n8n
+ * callback endpoint has a run to report events against. Shared by every
+ * audit source (Search Console, crawler).
+ */
 export async function createRunningAudit(
   organizationId: string,
   businessId: string,
@@ -26,6 +38,15 @@ export async function createRunningAudit(
     .insert(seoAudits)
     .values({ organizationId, businessId, status: "running", source, startedAt: new Date() })
     .returning();
+
+  await db.insert(automationRuns).values({
+    organizationId,
+    workflowName: source,
+    triggeredBy: "user",
+    status: "started",
+    correlationId: audit!.id,
+  });
+
   return audit!.id;
 }
 
@@ -34,6 +55,25 @@ export async function markAuditFailed(auditId: string): Promise<void> {
     .update(seoAudits)
     .set({ status: "failed", completedAt: new Date() })
     .where(eq(seoAudits.id, auditId));
+
+  const [run] = await db
+    .update(automationRuns)
+    .set({ status: "failed", finishedAt: new Date(), errorMessage: "Audit run failed." })
+    .where(eq(automationRuns.correlationId, auditId))
+    .returning({
+      organizationId: automationRuns.organizationId,
+      workflowName: automationRuns.workflowName,
+    });
+
+  if (run) {
+    await db.insert(notifications).values({
+      organizationId: run.organizationId,
+      userId: null,
+      type: "automation_failed",
+      title: `${run.workflowName} failed`,
+      body: null,
+    });
+  }
 }
 
 /**
@@ -58,6 +98,22 @@ export async function completeAuditWithIssues(input: {
     .update(seoAudits)
     .set({ status: "completed", url, score: score.toString(), completedAt: new Date() })
     .where(eq(seoAudits.id, auditId));
+
+  const [run] = await db
+    .update(automationRuns)
+    .set({ status: "succeeded", finishedAt: new Date() })
+    .where(eq(automationRuns.correlationId, auditId))
+    .returning({ workflowName: automationRuns.workflowName });
+
+  if (run) {
+    await db.insert(notifications).values({
+      organizationId,
+      userId: null,
+      type: "automation_succeeded",
+      title: `${run.workflowName} completed`,
+      body: `Score ${score} — ${candidates.length} issue${candidates.length === 1 ? "" : "s"} found.`,
+    });
+  }
 
   if (candidates.length === 0) {
     return { issueCount: 0, recommendationCount: 0 };
