@@ -23,6 +23,10 @@ repeat itself; monthly is a reasonable default).
 
 ## Build (node by node)
 
+Ready-to-import: `n8n/examples/06_send_report.json` (note included
+about why this workflow doesn't report to automation-run-events — see
+that file's sticky note). The steps below explain what's in that file.
+
 1. **Schedule Trigger.**
 2. **HTTP Request** — `GET <APP_URL>/api/internal/businesses/{{businessId}}/report-summary`
    Header: `x-internal-secret: {{$env.N8N_INTERNAL_SECRET}}`

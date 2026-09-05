@@ -1,0 +1,109 @@
+{
+  "name": "03_crawl_website",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "cronExpression", "expression": "0 7 * * 1" }]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Weekly Monday 07:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-400, 0]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "business-id",
+              "name": "businessId",
+              "type": "string",
+              "value": "REPLACE_WITH_BUSINESS_ID"
+            }
+          ]
+        }
+      },
+      "id": "set-business-id",
+      "name": "Business ID",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-160, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.APP_URL }}/api/internal/businesses/{{ $json.businessId }}/website-audit",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-internal-secret", "value": "={{ $env.N8N_INTERNAL_SECRET }}" }
+          ]
+        },
+        "options": {
+          "response": { "response": { "neverError": true } },
+          "timeout": 30000
+        }
+      },
+      "id": "http-request",
+      "name": "Trigger Audit",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [80, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "status-ok",
+              "leftValue": "={{ $json.statusCode }}",
+              "rightValue": 299,
+              "operator": { "type": "number", "operation": "lt" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-success",
+      "name": "Succeeded?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [320, 0]
+    },
+    {
+      "parameters": {
+        "content": "Success path — $json.body has { auditId, issueCount, recommendationCount }. Wire your own notification here.",
+        "height": 160,
+        "width": 260
+      },
+      "id": "note-success",
+      "name": "Sticky Note: Success",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [560, -140]
+    },
+    {
+      "parameters": {
+        "content": "Failure path — $json.body.error has { code, message }. CRAWL_FAILED (502) is worth one bounded retry (enable 'Retry On Fail' on the Trigger Audit node, 1 attempt) — the others won't succeed on retry. See n8n/docs/03_crawl_website.md.",
+        "height": 180,
+        "width": 300
+      },
+      "id": "note-failure",
+      "name": "Sticky Note: Failure",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [560, 100]
+    }
+  ],
+  "connections": {
+    "Weekly Monday 07:00": { "main": [[{ "node": "Business ID", "type": "main", "index": 0 }]] },
+    "Business ID": { "main": [[{ "node": "Trigger Audit", "type": "main", "index": 0 }]] },
+    "Trigger Audit": { "main": [[{ "node": "Succeeded?", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" }
+}

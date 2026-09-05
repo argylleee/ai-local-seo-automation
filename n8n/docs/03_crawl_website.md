@@ -20,6 +20,9 @@ day to day the way Search Console metrics do.
 
 ## Build (node by node)
 
+Ready-to-import: `n8n/examples/03_crawl_website.json`. The steps below
+explain what's in that file.
+
 1. **Schedule Trigger** — weekly cron.
 2. **HTTP Request** — `POST <APP_URL>/api/internal/businesses/{{businessId}}/website-audit`
    Header: `x-internal-secret: {{$env.N8N_INTERNAL_SECRET}}`

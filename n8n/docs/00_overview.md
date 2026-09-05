@@ -4,6 +4,20 @@ Per `docs/n8n.md`: the developer builds every workflow by hand in n8n.
 This directory only documents designs for review/import — nothing here
 was created, imported, or activated in a live n8n instance by an agent.
 
+`n8n/examples/01_sync_search_console.json`, `03_crawl_website.json`,
+and `06_send_report.json` are ready-to-import workflow files for the
+three workflows that are unblocked (see the status table below). In
+n8n: **Workflows → Import from File** → pick one → review every node
+before activating. Each has a `Business ID` (and, for #6, recipient
+email) Set node at the top with a `REPLACE_WITH_...` placeholder value
+— edit that before running. #6 also needs an SMTP credential attached
+to its Send Email node (`REPLACE_WITH_YOUR_SMTP_CREDENTIAL_ID`). All
+three assume your n8n instance can read `$env.APP_URL` and
+`$env.N8N_INTERNAL_SECRET` — set those as environment variables on the
+n8n process itself (self-hosted n8n allows `$env` access to process
+env vars by default; if `N8N_BLOCK_ENV_ACCESS_IN_NODE` is set, use an
+n8n credential instead of `$env` in the header value).
+
 ## Status of the 6 documented workflows
 
 `docs/n8n.md` names 6 example workflows. Mapping them against what's

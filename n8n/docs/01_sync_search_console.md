@@ -22,6 +22,9 @@ the data changes; don't schedule it hourly.
 
 ## Build (node by node)
 
+Ready-to-import: `n8n/examples/01_sync_search_console.json`. The steps
+below explain what's in that file.
+
 1. **Schedule Trigger** — daily cron, see above.
 2. **HTTP Request** — `POST <APP_URL>/api/internal/businesses/{{businessId}}/search-console-sync`
    Header: `x-internal-secret: {{$env.N8N_INTERNAL_SECRET}}`
