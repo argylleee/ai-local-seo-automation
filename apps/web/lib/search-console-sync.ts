@@ -55,7 +55,18 @@ export function computeSyncWindow(now: Date = new Date()): { startDate: string; 
   return { startDate: toDateString(start), endDate: toDateString(end) };
 }
 
-export class SearchConsoleSyncError extends Error {}
+export type SearchConsoleSyncErrorCode =
+  "BUSINESS_NOT_FOUND" | "NOT_CONNECTED" | "SITE_NOT_MATCHED";
+
+export class SearchConsoleSyncError extends Error {
+  constructor(
+    message: string,
+    public readonly code: SearchConsoleSyncErrorCode,
+  ) {
+    super(message);
+    this.name = "SearchConsoleSyncError";
+  }
+}
 
 /**
  * Pulls real Search Console data for one business, runs it through
@@ -63,6 +74,10 @@ export class SearchConsoleSyncError extends Error {}
  * normalization -> deterministic rules -> ... -> persistence" pipeline
  * from docs/seo-engine.md. Server-only: getValidAccessToken decrypts a
  * real OAuth token, which must never reach the browser.
+ *
+ * A seo_audits row is created up front (status "running") and updated
+ * to "completed" or "failed" at the end, so a failed sync still leaves
+ * an honest record — not silently thrown away.
  */
 export async function runSearchConsoleSync(
   organizationId: string,
@@ -74,7 +89,10 @@ export async function runSearchConsoleSync(
     .where(and(eq(businesses.id, businessId), eq(businesses.organizationId, organizationId)))
     .limit(1);
   if (!business) {
-    throw new SearchConsoleSyncError("Business not found in this organization.");
+    throw new SearchConsoleSyncError(
+      "Business not found in this organization.",
+      "BUSINESS_NOT_FOUND",
+    );
   }
 
   const [integration] = await db
@@ -90,107 +108,122 @@ export async function runSearchConsoleSync(
     )
     .limit(1);
   if (!integration) {
-    throw new SearchConsoleSyncError("Search Console is not connected for this business.");
-  }
-
-  const accessToken = await getValidAccessToken(integration.id);
-
-  let siteUrl = integration.externalAccountId;
-  if (!siteUrl) {
-    const sites = await listSites(accessToken);
-    siteUrl = matchSiteUrl(sites, business.website);
-    if (!siteUrl) {
-      throw new SearchConsoleSyncError(
-        "Could not find a Search Console property matching this business's website. " +
-          "Make sure the connected Google account has access to it.",
-      );
-    }
-    await db
-      .update(integrations)
-      .set({ externalAccountId: siteUrl })
-      .where(eq(integrations.id, integration.id));
-  }
-
-  const { startDate, endDate } = computeSyncWindow();
-  const rows = await getSearchAnalytics(accessToken, { siteUrl, startDate, endDate });
-
-  const normalizedRows: NormalizedSearchRow[] = rows.map((row) => ({
-    query: row.keys[0] ?? "",
-    page: row.keys[1] ?? "",
-    clicks: row.clicks,
-    impressions: row.impressions,
-    ctr: row.ctr,
-    position: row.position,
-  }));
-
-  // One row per query/page per sync date — re-running on the same day
-  // replaces that day's snapshot rather than duplicating it.
-  await db
-    .delete(searchConsoleMetrics)
-    .where(
-      and(
-        eq(searchConsoleMetrics.businessId, businessId),
-        eq(searchConsoleMetrics.date, endDate),
-        eq(searchConsoleMetrics.source, "google_search_console"),
-      ),
-    );
-
-  if (normalizedRows.length > 0) {
-    await db.insert(searchConsoleMetrics).values(
-      normalizedRows.map((row) => ({
-        organizationId,
-        businessId,
-        integrationId: integration.id,
-        query: row.query,
-        page: row.page,
-        clicks: row.clicks,
-        impressions: row.impressions,
-        ctr: row.ctr.toString(),
-        averagePosition: row.position.toString(),
-        date: endDate,
-        source: "google_search_console",
-        sourceUpdatedAt: new Date(),
-      })),
+    throw new SearchConsoleSyncError(
+      "Search Console is not connected for this business.",
+      "NOT_CONNECTED",
     );
   }
 
-  await db
-    .update(integrations)
-    .set({ lastSyncedAt: new Date() })
-    .where(eq(integrations.id, integration.id));
-
-  const { candidates, score } = analyzeSearchConsoleRows(normalizedRows);
-
-  // Audits are historical facts — always insert a new one rather than
-  // overwriting, per docs/database.md ("do not delete historical
-  // analytics").
   const [audit] = await db
     .insert(seoAudits)
     .values({
       organizationId,
       businessId,
-      url: siteUrl,
-      status: "completed",
-      score: score.toString(),
+      status: "running",
       source: "google_search_console",
       startedAt: new Date(),
-      completedAt: new Date(),
     })
     .returning();
+  const auditId = audit!.id;
 
-  if (candidates.length > 0) {
-    await db.insert(seoIssues).values(
-      candidates.map((candidate) => ({
-        organizationId,
-        auditId: audit!.id,
-        category: candidate.category,
-        code: candidate.code,
-        severity: candidate.severity,
-        evidence: candidate.evidence,
-        status: "open" as const,
-      })),
-    );
+  try {
+    const accessToken = await getValidAccessToken(integration.id);
+
+    let siteUrl = integration.externalAccountId;
+    if (!siteUrl) {
+      const sites = await listSites(accessToken);
+      siteUrl = matchSiteUrl(sites, business.website);
+      if (!siteUrl) {
+        throw new SearchConsoleSyncError(
+          "Could not find a Search Console property matching this business's website. " +
+            "Make sure the connected Google account has access to it.",
+          "SITE_NOT_MATCHED",
+        );
+      }
+      await db
+        .update(integrations)
+        .set({ externalAccountId: siteUrl })
+        .where(eq(integrations.id, integration.id));
+    }
+
+    const { startDate, endDate } = computeSyncWindow();
+    const rows = await getSearchAnalytics(accessToken, { siteUrl, startDate, endDate });
+
+    const normalizedRows: NormalizedSearchRow[] = rows.map((row) => ({
+      query: row.keys[0] ?? "",
+      page: row.keys[1] ?? "",
+      clicks: row.clicks,
+      impressions: row.impressions,
+      ctr: row.ctr,
+      position: row.position,
+    }));
+
+    // One row per query/page per sync date — re-running on the same day
+    // replaces that day's snapshot rather than duplicating it.
+    await db
+      .delete(searchConsoleMetrics)
+      .where(
+        and(
+          eq(searchConsoleMetrics.businessId, businessId),
+          eq(searchConsoleMetrics.date, endDate),
+          eq(searchConsoleMetrics.source, "google_search_console"),
+        ),
+      );
+
+    if (normalizedRows.length > 0) {
+      await db.insert(searchConsoleMetrics).values(
+        normalizedRows.map((row) => ({
+          organizationId,
+          businessId,
+          integrationId: integration.id,
+          query: row.query,
+          page: row.page,
+          clicks: row.clicks,
+          impressions: row.impressions,
+          ctr: row.ctr.toString(),
+          averagePosition: row.position.toString(),
+          date: endDate,
+          source: "google_search_console",
+          sourceUpdatedAt: new Date(),
+        })),
+      );
+    }
+
+    await db
+      .update(integrations)
+      .set({ lastSyncedAt: new Date() })
+      .where(eq(integrations.id, integration.id));
+
+    const { candidates, score } = analyzeSearchConsoleRows(normalizedRows);
+
+    // Audits are historical facts — this row was inserted up front and
+    // is now updated in place, never replaced by a fresh row, per
+    // docs/database.md ("do not delete historical analytics").
+    await db
+      .update(seoAudits)
+      .set({ status: "completed", url: siteUrl, score: score.toString(), completedAt: new Date() })
+      .where(eq(seoAudits.id, auditId));
+
+    if (candidates.length > 0) {
+      await db.insert(seoIssues).values(
+        candidates.map((candidate) => ({
+          organizationId,
+          auditId,
+          category: candidate.category,
+          code: candidate.code,
+          severity: candidate.severity,
+          evidence: candidate.evidence,
+          status: "open" as const,
+        })),
+      );
+    }
+
+    return { auditId, issueCount: candidates.length, rowCount: rows.length };
+  } catch (error) {
+    await db
+      .update(seoAudits)
+      .set({ status: "failed", completedAt: new Date() })
+      .where(eq(seoAudits.id, auditId));
+    throw error;
   }
-
-  return { auditId: audit!.id, issueCount: candidates.length, rowCount: rows.length };
 }
