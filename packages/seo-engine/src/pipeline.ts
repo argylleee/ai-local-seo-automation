@@ -1,8 +1,32 @@
-import { detectHighVisibilityLowCtr, detectStrikingDistanceKeyword } from "./rules";
+import {
+  detectHeadingIssues,
+  detectHighVisibilityLowCtr,
+  detectMissingAltText,
+  detectMissingCanonical,
+  detectMissingMetaDescription,
+  detectMissingTitle,
+  detectMissingViewportMeta,
+  detectNoindex,
+  detectStrikingDistanceKeyword,
+  detectThinContent,
+  detectTitleLength,
+} from "./rules";
 import { calculateScore } from "./scoring";
-import type { NormalizedSearchRow, SeoIssueCandidate } from "./types";
+import type { NormalizedSearchRow, PageAuditInput, SeoIssueCandidate } from "./types";
 
-const RULES = [detectHighVisibilityLowCtr, detectStrikingDistanceKeyword];
+const SEARCH_CONSOLE_RULES = [detectHighVisibilityLowCtr, detectStrikingDistanceKeyword];
+
+const PAGE_AUDIT_RULES = [
+  detectNoindex,
+  detectMissingViewportMeta,
+  detectMissingTitle,
+  detectTitleLength,
+  detectMissingMetaDescription,
+  detectHeadingIssues,
+  detectMissingCanonical,
+  detectMissingAltText,
+  detectThinContent,
+];
 
 /**
  * Runs every deterministic rule against normalized Search Console rows
@@ -17,10 +41,27 @@ export function analyzeSearchConsoleRows(rows: NormalizedSearchRow[]): {
 } {
   const candidates: SeoIssueCandidate[] = [];
   for (const row of rows) {
-    for (const rule of RULES) {
+    for (const rule of SEARCH_CONSOLE_RULES) {
       const candidate = rule(row);
       if (candidate) candidates.push(candidate);
     }
+  }
+  return { candidates, score: calculateScore(candidates) };
+}
+
+/**
+ * Runs every deterministic technical/on-page/content rule against one
+ * crawled page (apps/crawler's output, mapped onto PageAuditInput) and
+ * returns the detected candidates plus the resulting score.
+ */
+export function analyzePageAudit(page: PageAuditInput): {
+  candidates: SeoIssueCandidate[];
+  score: number;
+} {
+  const candidates: SeoIssueCandidate[] = [];
+  for (const rule of PAGE_AUDIT_RULES) {
+    const candidate = rule(page);
+    if (candidate) candidates.push(candidate);
   }
   return { candidates, score: calculateScore(candidates) };
 }

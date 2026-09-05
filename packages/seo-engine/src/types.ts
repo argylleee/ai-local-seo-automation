@@ -16,6 +16,27 @@ export interface NormalizedSearchRow {
 }
 
 /**
+ * One page's crawled technical/on-page facts. Deliberately independent
+ * of apps/crawler's own ExtractedPageData shape — packages/seo-engine
+ * must not depend on an app (a package depending on an app would
+ * invert the intended dependency direction); the caller maps crawler
+ * output onto this shape.
+ */
+export interface PageAuditInput {
+  url: string;
+  title: string | null;
+  metaDescription: string | null;
+  canonicalUrl: string | null;
+  h1Count: number;
+  wordCount: number;
+  imageCount: number;
+  imagesMissingAlt: number;
+  hasStructuredData: boolean;
+  isNoindex: boolean;
+  hasViewportMeta: boolean;
+}
+
+/**
  * A deterministically-detected candidate issue, before AI explanation
  * and persistence. See docs/seo-engine.md's pipeline: raw data ->
  * normalization -> deterministic rules -> candidate issues -> evidence
