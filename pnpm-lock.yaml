@@ -82,6 +82,9 @@ importers:
       '@local-seo/ai':
         specifier: workspace:*
         version: link:../../packages/ai
+      '@local-seo/crawler':
+        specifier: workspace:*
+        version: link:../crawler
       '@local-seo/db':
         specifier: workspace:*
         version: link:../../packages/db

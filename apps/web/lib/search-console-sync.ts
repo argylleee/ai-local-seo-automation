@@ -1,20 +1,8 @@
-import { generateRecommendation } from "@local-seo/ai";
+import { completeAuditWithIssues, createRunningAudit, markAuditFailed } from "@/lib/audit-shared";
 import { db } from "@local-seo/db";
-import {
-  businesses,
-  integrations,
-  recommendations,
-  searchConsoleMetrics,
-  seoAudits,
-  seoIssues,
-} from "@local-seo/db/schema";
+import { businesses, integrations, searchConsoleMetrics } from "@local-seo/db/schema";
 import { getSearchAnalytics, getValidAccessToken, listSites } from "@local-seo/integrations";
-import {
-  analyzeSearchConsoleRows,
-  SEVERITY_PENALTY,
-  type NormalizedSearchRow,
-  type SeoIssueCandidate,
-} from "@local-seo/seo-engine";
+import { analyzeSearchConsoleRows, type NormalizedSearchRow } from "@local-seo/seo-engine";
 import { and, eq } from "drizzle-orm";
 
 /** Strips a GSC "sc-domain:" prefix and "www.", leaving a bare comparable hostname. */
@@ -75,62 +63,6 @@ export class SearchConsoleSyncError extends Error {
   }
 }
 
-const PRIORITY_TO_IMPACT: Record<string, "low" | "medium" | "high"> = {
-  LOW: "low",
-  MEDIUM: "medium",
-  HIGH: "high",
-};
-
-// Cap how many issues get an AI-worded recommendation per sync, per
-// docs/ai.md's cost-control guidance — not every detected issue needs
-// one, and it keeps a single sync well within Groq's free-tier rate
-// limits even if the rule set grows.
-const MAX_RECOMMENDATIONS_PER_SYNC = 5;
-
-/**
- * Generates and persists an AI-worded recommendation for the
- * highest-severity issues from this sync. AI only ever writes the
- * wording (title/rationale) — the evidence it's shown, and the
- * category/impact stored, come straight from the deterministic
- * candidate, never from the model. A failure here (e.g. a DB error)
- * is logged and skipped rather than failing the whole sync — the
- * audit and its issues already persisted successfully.
- */
-async function generateRecommendationsForTopIssues(
-  organizationId: string,
-  businessId: string,
-  issues: { id: string; candidate: SeoIssueCandidate }[],
-): Promise<number> {
-  const top = [...issues]
-    .sort((a, b) => SEVERITY_PENALTY[b.candidate.severity] - SEVERITY_PENALTY[a.candidate.severity])
-    .slice(0, MAX_RECOMMENDATIONS_PER_SYNC);
-
-  let created = 0;
-  for (const { id: sourceIssueId, candidate } of top) {
-    try {
-      const { data, source } = await generateRecommendation(candidate);
-      await db.insert(recommendations).values({
-        organizationId,
-        businessId,
-        sourceIssueId,
-        category: candidate.category,
-        title: data.title,
-        evidence: candidate.evidence,
-        impact: PRIORITY_TO_IMPACT[data.priority] ?? "medium",
-        confidence: data.confidence.toString(),
-        recommendedAction: data.rationale,
-        status: "pending",
-        aiGenerated: source !== "deterministic",
-        modelName: source,
-      });
-      created += 1;
-    } catch (error) {
-      console.error("Failed to generate/persist a recommendation for issue", sourceIssueId, error);
-    }
-  }
-  return created;
-}
-
 /**
  * Pulls real Search Console data for one business, runs it through
  * packages/seo-engine, and persists the results — the "raw data ->
@@ -178,17 +110,7 @@ export async function runSearchConsoleSync(
     );
   }
 
-  const [audit] = await db
-    .insert(seoAudits)
-    .values({
-      organizationId,
-      businessId,
-      status: "running",
-      source: "google_search_console",
-      startedAt: new Date(),
-    })
-    .returning();
-  const auditId = audit!.id;
+  const auditId = await createRunningAudit(organizationId, businessId, "google_search_console");
 
   try {
     const accessToken = await getValidAccessToken(integration.id);
@@ -260,48 +182,18 @@ export async function runSearchConsoleSync(
 
     const { candidates, score } = analyzeSearchConsoleRows(normalizedRows);
 
-    // Audits are historical facts — this row was inserted up front and
-    // is now updated in place, never replaced by a fresh row, per
-    // docs/database.md ("do not delete historical analytics").
-    await db
-      .update(seoAudits)
-      .set({ status: "completed", url: siteUrl, score: score.toString(), completedAt: new Date() })
-      .where(eq(seoAudits.id, auditId));
+    const { issueCount, recommendationCount } = await completeAuditWithIssues({
+      organizationId,
+      businessId,
+      auditId,
+      url: siteUrl,
+      score,
+      candidates,
+    });
 
-    let recommendationCount = 0;
-    if (candidates.length > 0) {
-      const insertedIssues = await db
-        .insert(seoIssues)
-        .values(
-          candidates.map((candidate) => ({
-            organizationId,
-            auditId,
-            category: candidate.category,
-            code: candidate.code,
-            severity: candidate.severity,
-            evidence: candidate.evidence,
-            status: "open" as const,
-          })),
-        )
-        .returning({ id: seoIssues.id });
-
-      const issuesWithCandidates = insertedIssues.map((issue, index) => ({
-        id: issue.id,
-        candidate: candidates[index]!,
-      }));
-      recommendationCount = await generateRecommendationsForTopIssues(
-        organizationId,
-        businessId,
-        issuesWithCandidates,
-      );
-    }
-
-    return { auditId, issueCount: candidates.length, rowCount: rows.length, recommendationCount };
+    return { auditId, issueCount, rowCount: rows.length, recommendationCount };
   } catch (error) {
-    await db
-      .update(seoAudits)
-      .set({ status: "failed", completedAt: new Date() })
-      .where(eq(seoAudits.id, auditId));
+    await markAuditFailed(auditId);
     throw error;
   }
 }

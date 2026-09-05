@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
     "@local-seo/ai",
     "@local-seo/logger",
     "@local-seo/shared",
+    "@local-seo/crawler",
   ],
 };
 
