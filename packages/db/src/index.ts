@@ -1,3 +1,3 @@
-export { db } from "./client";
+export { closeDb, db } from "./client";
 export type { Database } from "./client";
 export * as schema from "./schema";

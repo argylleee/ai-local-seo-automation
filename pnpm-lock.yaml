@@ -7,10 +7,29 @@ settings:
 importers:
 
   .:
+    dependencies:
+      '@local-seo/db':
+        specifier: workspace:*
+        version: link:packages/db
+      '@local-seo/integrations':
+        specifier: workspace:*
+        version: link:packages/integrations
+      '@local-seo/seo-engine':
+        specifier: workspace:*
+        version: link:packages/seo-engine
+      drizzle-orm:
+        specifier: ^0.38.0
+        version: 0.38.4(@types/react@19.2.18)(postgres@3.4.9)(react@19.2.8)
     devDependencies:
       '@eslint/js':
         specifier: ^9.17.0
         version: 9.39.5
+      '@types/node':
+        specifier: ^22.10.0
+        version: 22.20.1
+      dotenv:
+        specifier: ^16.4.0
+        version: 16.6.1
       eslint:
         specifier: ^9.17.0
         version: 9.39.5(jiti@2.7.0)(supports-color@7.2.0)
@@ -23,6 +42,9 @@ importers:
       prettier:
         specifier: ^3.4.0
         version: 3.9.6
+      tsx:
+        specifier: ^4.19.0
+        version: 4.23.13
       turbo:
         specifier: ^2.3.0
         version: 2.10.12

@@ -15,3 +15,8 @@ const queryClient = postgres(requireDatabaseUrl());
 export const db = drizzle(queryClient, { schema });
 
 export type Database = typeof db;
+
+/** Closes the underlying connection pool — call this at the end of one-off scripts (seed, etc.) so the process can exit instead of hanging on an open connection. Long-running servers (apps/web) should never call this. */
+export async function closeDb(): Promise<void> {
+  await queryClient.end();
+}
