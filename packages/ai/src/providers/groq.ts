@@ -1,4 +1,9 @@
-const DEFAULT_MODEL = "llama-3.3-70b-versatile";
+// Verified live against Groq's /models endpoint — llama-3.3-70b-versatile
+// (an earlier training-data-era default) has since been decommissioned.
+// groq/compound-mini is listed with no per-token pricing (free) and
+// json_mode support. Re-check https://console.groq.com/docs/models if
+// this ever starts 404ing again — Groq's free lineup shifts.
+const DEFAULT_MODEL = "groq/compound-mini";
 
 export class GroqUnavailableError extends Error {}
 
