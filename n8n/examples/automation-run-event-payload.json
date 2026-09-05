@@ -1,0 +1,8 @@
+{
+  "_comment": "Example request body for POST /api/internal/automation-runs/:id/events, validated by automationRunEventRequestSchema (packages/schemas/src/api/automation-runs.ts). :id in the URL is the automation_runs.id, not the seo_audits.id.",
+  "eventType": "succeeded",
+  "idempotencyKey": "n8n-execution-4821-attempt-1",
+  "payload": {
+    "message": "Sent 1 email successfully."
+  }
+}
