@@ -1,14 +1,7 @@
 import { db } from "@local-seo/db";
 import { organizationMembers, organizations, users } from "@local-seo/db/schema";
+import { slugify } from "@local-seo/shared";
 import { eq } from "drizzle-orm";
-
-function slugify(value: string): string {
-  const slug = value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-  return slug || "org";
-}
 
 /**
  * First-login bootstrap for a Google account. Auth.js only handles

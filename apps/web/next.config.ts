@@ -7,6 +7,8 @@ const nextConfig: NextConfig = {
     "@local-seo/integrations",
     "@local-seo/seo-engine",
     "@local-seo/ai",
+    "@local-seo/logger",
+    "@local-seo/shared",
   ],
 };
 
