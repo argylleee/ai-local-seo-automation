@@ -10,17 +10,24 @@ Before implementing a task:
 
 ## n8n
 
-The developer manually creates all n8n workflows.
+Default rule: the developer manually creates all n8n workflows, and an
+agent may only document or review workflow designs supplied by the
+developer.
 
-Do not:
-- use n8n MCP/tooling to create workflows
-- modify workflow definitions
-- activate/deactivate workflows
-- create credentials
-- import/export workflows automatically
-- call business-side-effect nodes on behalf of the developer
+**Standing exception in effect for this project** — see
+`docs/n8n.md`'s "Agent-built workflows" section for the full scope and
+history. Summary: Claude may use n8n MCP tooling to create/modify this
+project's own workflows against the developer's self-hosted instance.
+Even under the exception, do not:
+- activate/deactivate a workflow (built workflows are left inactive
+  for the developer to review and activate)
+- create a credential with real secret material (reference credentials
+  by name/type; the developer fills in actual secrets themselves)
+- execute a node with a real external side effect (sending an email,
+  writing to a live third-party API) against production data
 
-You may document or review workflow designs supplied by the developer.
+`docs/n8n.md` is the source of truth if this exception is ever
+narrowed or revoked — check there, not just here, before relying on it.
 
 ## AI
 
