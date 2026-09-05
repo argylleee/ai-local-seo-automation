@@ -84,7 +84,7 @@ export async function syncGoogleSearchConsole(businessId: string): Promise<void>
     redirect("/sign-in");
   }
 
-  let result: { issueCount: number; rowCount: number };
+  let result: Awaited<ReturnType<typeof runSearchConsoleSync>>;
   try {
     result = await runSearchConsoleSync(session.organizationId, businessId);
   } catch (error) {
@@ -96,5 +96,7 @@ export async function syncGoogleSearchConsole(businessId: string): Promise<void>
     throw error;
   }
 
-  redirect(`/settings?synced=1&sync_rows=${result.rowCount}&sync_issues=${result.issueCount}`);
+  redirect(
+    `/settings?synced=1&sync_rows=${result.rowCount}&sync_issues=${result.issueCount}&sync_recommendations=${result.recommendationCount}`,
+  );
 }

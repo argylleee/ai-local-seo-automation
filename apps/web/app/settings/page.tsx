@@ -36,6 +36,8 @@ export default async function SettingsPage({
   const synced = typeof params.synced === "string" ? params.synced : undefined;
   const syncRows = typeof params.sync_rows === "string" ? params.sync_rows : undefined;
   const syncIssues = typeof params.sync_issues === "string" ? params.sync_issues : undefined;
+  const syncRecommendations =
+    typeof params.sync_recommendations === "string" ? params.sync_recommendations : undefined;
   const integrationError =
     typeof params.integration_error === "string" ? params.integration_error : undefined;
   const syncMessage = typeof params.sync_message === "string" ? params.sync_message : undefined;
@@ -76,7 +78,8 @@ export default async function SettingsPage({
         ) : null}
         {synced ? (
           <p role="status" className="rounded-md bg-secondary px-4 py-2 text-sm">
-            Sync complete: {syncRows ?? 0} row(s) pulled, {syncIssues ?? 0} issue(s) detected.
+            Sync complete: {syncRows ?? 0} row(s) pulled, {syncIssues ?? 0} issue(s) detected,{" "}
+            {syncRecommendations ?? 0} recommendation(s) generated.
           </p>
         ) : null}
         {integrationError ? (
