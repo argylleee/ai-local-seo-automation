@@ -2,6 +2,7 @@
 
 import { auth } from "@/lib/auth";
 import { GOOGLE_OAUTH_STATE_COOKIE } from "@/lib/google-oauth-constants";
+import { runSearchConsoleSync, SearchConsoleSyncError } from "@/lib/search-console-sync";
 import { db } from "@local-seo/db";
 import { businesses, integrations } from "@local-seo/db/schema";
 import {
@@ -75,4 +76,25 @@ export async function disconnectGoogleSearchConsole(integrationId: string): Prom
   }
 
   redirect("/settings");
+}
+
+export async function syncGoogleSearchConsole(businessId: string): Promise<void> {
+  const session = await auth();
+  if (!session?.organizationId) {
+    redirect("/sign-in");
+  }
+
+  let result: { issueCount: number; rowCount: number };
+  try {
+    result = await runSearchConsoleSync(session.organizationId, businessId);
+  } catch (error) {
+    if (error instanceof SearchConsoleSyncError) {
+      redirect(
+        `/settings?integration_error=sync_failed&sync_message=${encodeURIComponent(error.message)}`,
+      );
+    }
+    throw error;
+  }
+
+  redirect(`/settings?synced=1&sync_rows=${result.rowCount}&sync_issues=${result.issueCount}`);
 }
