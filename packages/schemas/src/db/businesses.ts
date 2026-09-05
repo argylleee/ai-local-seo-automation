@@ -5,6 +5,7 @@ import { zNumeric } from "./_numeric";
 
 export const businessSelectSchema = createSelectSchema(businesses);
 export const businessInsertSchema = createInsertSchema(businesses, {
+  name: (schema) => schema.name.min(1, "Name is required."),
   website: (schema) => schema.website.url(),
 });
 

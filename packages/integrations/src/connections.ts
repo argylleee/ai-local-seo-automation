@@ -7,11 +7,12 @@ import { refreshAccessToken, type GoogleTokenResponse } from "./google-oauth";
 type IntegrationProvider = (typeof integrations.$inferSelect)["provider"];
 
 /**
- * Persists a newly-connected integration: upserts the `integrations` row
- * to "connected" and writes an oauth_connections row with encrypted
- * tokens. Called only from the OAuth callback route — never from a
- * client component (docs/security.md: never expose tokens to the
- * browser).
+ * Persists a connected integration: upserts the `integrations` row to
+ * "connected" (one row per organization/business/provider — reconnecting
+ * after a disconnect updates the existing row rather than creating a
+ * duplicate) and its oauth_connections row with encrypted tokens. Called
+ * only from the OAuth callback route — never from a client component
+ * (docs/security.md: never expose tokens to the browser).
  */
 export async function saveConnection(input: {
   organizationId: string;
@@ -20,20 +21,45 @@ export async function saveConnection(input: {
   externalAccountId?: string;
   tokens: GoogleTokenResponse;
 }): Promise<{ integrationId: string }> {
-  const [integration] = await db
-    .insert(integrations)
-    .values({
-      organizationId: input.organizationId,
-      businessId: input.businessId,
-      provider: input.provider,
-      status: "connected",
-      externalAccountId: input.externalAccountId,
-      lastSyncedAt: new Date(),
-    })
-    .returning();
-  const integrationId = integration!.id;
+  const [existing] = await db
+    .select({ id: integrations.id })
+    .from(integrations)
+    .where(
+      and(
+        eq(integrations.organizationId, input.organizationId),
+        eq(integrations.businessId, input.businessId),
+        eq(integrations.provider, input.provider),
+      ),
+    )
+    .limit(1);
 
-  await db.insert(oauthConnections).values({
+  let integrationId: string;
+  if (existing) {
+    integrationId = existing.id;
+    await db
+      .update(integrations)
+      .set({
+        status: "connected",
+        externalAccountId: input.externalAccountId,
+        lastSyncedAt: new Date(),
+      })
+      .where(eq(integrations.id, integrationId));
+  } else {
+    const [created] = await db
+      .insert(integrations)
+      .values({
+        organizationId: input.organizationId,
+        businessId: input.businessId,
+        provider: input.provider,
+        status: "connected",
+        externalAccountId: input.externalAccountId,
+        lastSyncedAt: new Date(),
+      })
+      .returning();
+    integrationId = created!.id;
+  }
+
+  const connectionValues = {
     organizationId: input.organizationId,
     integrationId,
     provider: input.provider,
@@ -43,7 +69,22 @@ export async function saveConnection(input: {
       : null,
     scope: input.tokens.scope,
     expiresAt: new Date(Date.now() + input.tokens.expires_in * 1000),
-  });
+  };
+
+  const [existingConnection] = await db
+    .select({ id: oauthConnections.id })
+    .from(oauthConnections)
+    .where(eq(oauthConnections.integrationId, integrationId))
+    .limit(1);
+
+  if (existingConnection) {
+    await db
+      .update(oauthConnections)
+      .set(connectionValues)
+      .where(eq(oauthConnections.id, existingConnection.id));
+  } else {
+    await db.insert(oauthConnections).values(connectionValues);
+  }
 
   return { integrationId };
 }

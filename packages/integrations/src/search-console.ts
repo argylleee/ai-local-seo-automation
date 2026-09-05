@@ -2,6 +2,10 @@ import { z } from "zod";
 
 const API_BASE = "https://www.googleapis.com/webmasters/v3";
 
+// Read-only: this product never modifies Search Console data, and OAuth
+// scopes should always be the minimum needed (docs/security.md).
+export const SEARCH_CONSOLE_SCOPE = "https://www.googleapis.com/auth/webmasters.readonly";
+
 async function callSearchConsole(
   accessToken: string,
   path: string,

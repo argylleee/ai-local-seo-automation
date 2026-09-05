@@ -1,6 +1,6 @@
 import { db } from "@local-seo/db";
-import { businesses, oauthConnections, organizations } from "@local-seo/db/schema";
-import { eq } from "drizzle-orm";
+import { businesses, integrations, oauthConnections, organizations } from "@local-seo/db/schema";
+import { and, eq } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { decryptToken } from "./crypto";
 import { disconnectIntegration, getValidAccessToken, saveConnection } from "./connections";
@@ -90,6 +90,57 @@ describe("saveConnection + getValidAccessToken (real Postgres)", () => {
       .from(oauthConnections)
       .where(eq(oauthConnections.integrationId, integrationId));
     expect(decryptToken(row!.accessTokenEncrypted)).toBe("renewed-access-token");
+  });
+});
+
+describe("saveConnection reconnection (real Postgres)", () => {
+  it("upserts rather than duplicating rows when reconnecting the same business/provider", async () => {
+    const first = await saveConnection({
+      organizationId,
+      businessId,
+      provider: "google_business_profile",
+      tokens: {
+        access_token: "first-token",
+        expires_in: 3600,
+        scope: "",
+        token_type: "Bearer",
+      },
+    });
+
+    await disconnectIntegration(organizationId, first.integrationId);
+
+    const second = await saveConnection({
+      organizationId,
+      businessId,
+      provider: "google_business_profile",
+      tokens: {
+        access_token: "second-token",
+        expires_in: 3600,
+        scope: "",
+        token_type: "Bearer",
+      },
+    });
+
+    expect(second.integrationId).toBe(first.integrationId);
+
+    const rows = await db
+      .select()
+      .from(integrations)
+      .where(
+        and(
+          eq(integrations.businessId, businessId),
+          eq(integrations.provider, "google_business_profile"),
+        ),
+      );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.status).toBe("connected");
+
+    const connectionRows = await db
+      .select()
+      .from(oauthConnections)
+      .where(eq(oauthConnections.integrationId, first.integrationId));
+    expect(connectionRows).toHaveLength(1);
+    expect(decryptToken(connectionRows[0]!.accessTokenEncrypted)).toBe("second-token");
   });
 });
 

@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CreateBusinessForm } from "@/components/create-business-form";
 import { auth } from "@/lib/auth";
 import { db } from "@local-seo/db";
 import { businesses } from "@local-seo/db/schema";
@@ -22,17 +23,7 @@ export default async function BusinessesPage() {
       <div className="space-y-6">
         <h1 className="text-xl font-semibold">Businesses</h1>
 
-        {orgBusinesses.length === 0 ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>No businesses yet</CardTitle>
-            </CardHeader>
-            <CardContent className="text-muted-foreground text-sm">
-              {/* Create-business form/API lands with the businesses feature module. */}
-              Businesses you add will appear here.
-            </CardContent>
-          </Card>
-        ) : (
+        {orgBusinesses.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {orgBusinesses.map((business) => (
               <Card key={business.id}>
@@ -45,7 +36,16 @@ export default async function BusinessesPage() {
               </Card>
             ))}
           </div>
-        )}
+        ) : null}
+
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>Add a business</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CreateBusinessForm />
+          </CardContent>
+        </Card>
       </div>
     </AppShell>
   );

@@ -41,6 +41,9 @@ importers:
       '@local-seo/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@local-seo/integrations':
+        specifier: workspace:*
+        version: link:../../packages/integrations
       '@local-seo/schemas':
         specifier: workspace:*
         version: link:../../packages/schemas

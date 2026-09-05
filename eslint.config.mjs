@@ -13,6 +13,9 @@ export default tseslint.config(
       "**/node_modules/**",
       // transient file vitest writes/removes while loading its TS config
       "**/*.timestamp-*.mjs",
+      // shadcn/ui vendored component source — generic prop-spreading
+      // wrappers trip static a11y checks that only make sense at call sites
+      "apps/web/components/ui/**",
     ],
   },
   js.configs.recommended,
