@@ -5,15 +5,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
-// Primary navigation per docs/design.md. Only routes that exist today are
-// listed — the rest of the documented nav (Local Visibility, Keywords,
-// Website Audit, Reviews, Competitors, Reports, Integrations) is added
-// as each feature module is built, rather than linking to pages that
-// don't exist yet.
+// Primary navigation per docs/design.md, in the documented order.
+// "Integrations" isn't a separate page — it's covered by Settings.
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Overview" },
   { href: "/businesses", label: "Businesses" },
+  { href: "/local-visibility", label: "Local Visibility" },
+  { href: "/keywords", label: "Keywords" },
+  { href: "/audits", label: "Website Audit" },
+  { href: "/reviews", label: "Reviews" },
+  { href: "/competitors", label: "Competitors" },
   { href: "/recommendations", label: "Recommendations" },
+  { href: "/reports", label: "Reports" },
   { href: "/settings", label: "Settings" },
 ];
 
