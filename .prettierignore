@@ -1,3 +1,7 @@
 pnpm-lock.yaml
 *.md
 **/migrations/meta/
+# shadcn/ui vendored component source/theme tokens, and Next.js's auto-managed file
+apps/web/components/ui/
+apps/web/app/globals.css
+apps/web/next-env.d.ts
