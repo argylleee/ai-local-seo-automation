@@ -20,12 +20,13 @@ day to day the way Search Console metrics do.
 
 ## Build (node by node)
 
-Ready-to-import: `n8n/examples/03_crawl_website.json`. The steps below
-explain what's in that file.
+Already built on the developer's n8n instance — see `n8n/docs/00_overview.md`
+for the workflow ID/URL and the setup steps still needed before
+activating. It follows the shape below:
 
 1. **Schedule Trigger** — weekly cron.
 2. **HTTP Request** — `POST <APP_URL>/api/internal/businesses/{{businessId}}/website-audit`
-   Header: `x-internal-secret: {{$env.N8N_INTERNAL_SECRET}}`
+   Auth: `httpTemplatedCustomAuth` credential ("Local SEO Internal Secret") sending `x-internal-secret`.
    Response on success: `{ auditId, issueCount, recommendationCount }`.
    Response on failure: `{ error: { code, message } }` with status 404
    (`BUSINESS_NOT_FOUND`), 422 (`NO_WEBSITE` / `CRAWL_DISALLOWED`), or
@@ -39,10 +40,13 @@ explain what's in that file.
 
 ## Credentials required
 
-- `N8N_INTERNAL_SECRET` only. The crawler (`apps/crawler`) runs inside
-  the app's own process/deployment — n8n never fetches the target
-  website itself, so none of the SSRF-guard logic needs to exist on
-  the n8n side.
+- `httpTemplatedCustomAuth` credential ("Local SEO Internal Secret")
+  sending `x-internal-secret`, matching `N8N_INTERNAL_SECRET` in the
+  app's environment (shared with `01_sync_search_console`).
+- Telegram credential (already exists on the instance) for notifications.
+- Nothing else — the crawler (`apps/crawler`) runs inside the app's own
+  process/deployment. n8n never fetches the target website itself, so
+  none of the SSRF-guard logic needs to exist on the n8n side.
 
 ## Rate limits
 

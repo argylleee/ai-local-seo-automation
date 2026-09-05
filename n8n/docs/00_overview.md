@@ -1,22 +1,40 @@
 # n8n Workflow Overview
 
-Per `docs/n8n.md`: the developer builds every workflow by hand in n8n.
-This directory only documents designs for review/import — nothing here
-was created, imported, or activated in a live n8n instance by an agent.
+Per `docs/n8n.md`'s "Agent-built workflows" standing exception (in
+effect since 2026-09-06), the three unblocked workflows below were
+built directly on the developer's self-hosted n8n instance via n8n MCP
+tooling, using the n8n Workflow SDK (a restricted TypeScript DSL, not
+raw workflow-export JSON — an earlier attempt at hand-writing export
+JSON didn't import cleanly). All three were created **inactive**, per
+the exception's boundary — activation stays a manual, developer-only
+step.
 
-`n8n/examples/01_sync_search_console.json`, `03_crawl_website.json`,
-and `06_send_report.json` are ready-to-import workflow files for the
-three workflows that are unblocked (see the status table below). In
-n8n: **Workflows → Import from File** → pick one → review every node
-before activating. Each has a `Business ID` (and, for #6, recipient
-email) Set node at the top with a `REPLACE_WITH_...` placeholder value
-— edit that before running. #6 also needs an SMTP credential attached
-to its Send Email node (`REPLACE_WITH_YOUR_SMTP_CREDENTIAL_ID`). All
-three assume your n8n instance can read `$env.APP_URL` and
-`$env.N8N_INTERNAL_SECRET` — set those as environment variables on the
-n8n process itself (self-hosted n8n allows `$env` access to process
-env vars by default; if `N8N_BLOCK_ENV_ACCESS_IN_NODE` is set, use an
-n8n credential instead of `$env` in the header value).
+| Workflow | n8n workflow ID | URL |
+|---|---|---|
+| `01_sync_search_console` | `1cffpi7WntTUYn84` | https://aldreisantua-n8n.duckdns.org/workflow/1cffpi7WntTUYn84 |
+| `03_crawl_website` | `xVZ8AYyrf9p1c3pM` | https://aldreisantua-n8n.duckdns.org/workflow/xVZ8AYyrf9p1c3pM |
+| `06_send_report` | `BQqdC0PNXogBaoph` | https://aldreisantua-n8n.duckdns.org/workflow/BQqdC0PNXogBaoph |
+
+Each notifies via **Telegram** (an existing credential on the
+instance — no SMTP setup needed) and authenticates its HTTP Request
+node against the app's internal endpoints via a
+`httpTemplatedCustomAuth` credential named **"Local SEO Internal
+Secret"** (created as an empty shell only — no secret value was set by
+the agent, per the exception's credential boundary).
+
+## Before activating any of these (developer steps, not done by the agent)
+
+1. Open the **"Local SEO Internal Secret"** credential (shared across
+   all three workflows) and set its header template to send
+   `x-internal-secret` with the same value as `N8N_INTERNAL_SECRET` in
+   the app's environment.
+2. Open each workflow's **"Config"** node and replace both placeholder
+   values — `appUrl` (once you've deployed to Vercel/Neon — see the
+   rest of this session's guidance) and `businessId` (a real UUID from
+   the app's Businesses page).
+3. Open each Telegram node and replace the chat-ID placeholder with
+   your own (DM `@get_id_bot` on Telegram to find it).
+4. Review every node, then activate the workflow yourself in the n8n UI.
 
 ## Status of the 6 documented workflows
 

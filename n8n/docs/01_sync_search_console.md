@@ -22,12 +22,14 @@ the data changes; don't schedule it hourly.
 
 ## Build (node by node)
 
-Ready-to-import: `n8n/examples/01_sync_search_console.json`. The steps
-below explain what's in that file.
+Already built on the developer's n8n instance — see `n8n/docs/00_overview.md`
+for the workflow ID/URL and the setup steps still needed before
+activating (credential value, placeholders, chat ID). It follows the
+shape below:
 
 1. **Schedule Trigger** — daily cron, see above.
 2. **HTTP Request** — `POST <APP_URL>/api/internal/businesses/{{businessId}}/search-console-sync`
-   Header: `x-internal-secret: {{$env.N8N_INTERNAL_SECRET}}`
+   Auth: `httpTemplatedCustomAuth` credential ("Local SEO Internal Secret") sending `x-internal-secret`.
    Response on success: `{ auditId, issueCount, rowCount, recommendationCount }`.
    Response on failure: `{ error: { code, message } }` with status 404
    (`BUSINESS_NOT_FOUND`), 409 (`NOT_CONNECTED`), or 422 (`SITE_NOT_MATCHED`).
@@ -44,8 +46,10 @@ below explain what's in that file.
 
 ## Credentials required
 
-- `N8N_INTERNAL_SECRET` (n8n credential/env var, matches the same value
-  set in the app's environment).
+- `httpTemplatedCustomAuth` credential ("Local SEO Internal Secret")
+  sending `x-internal-secret`, matching `N8N_INTERNAL_SECRET` in the
+  app's environment.
+- Telegram credential (already exists on the instance) for notifications.
 - Nothing else — this workflow never talks to Google directly. The
   actual Search Console OAuth tokens stay where they already are:
   encrypted at rest in Postgres, decrypted only inside `apps/web`
