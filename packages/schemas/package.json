@@ -1,0 +1,25 @@
+{
+  "name": "@local-seo/schemas",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "echo 'schemas: source-only package, no build step'",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@local-seo/db": "workspace:*",
+    "drizzle-orm": "^0.38.0",
+    "drizzle-zod": "^0.5.1",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}
