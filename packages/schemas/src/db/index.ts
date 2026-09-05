@@ -8,3 +8,4 @@ export * from "./competitors";
 export * from "./recommendations";
 export * from "./automation";
 export * from "./audit-logs";
+export * from "./visibility";

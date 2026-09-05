@@ -1,11 +1,21 @@
+import { AddVisibilitySnapshotForm } from "@/app/local-visibility/visibility-forms";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { auth } from "@/lib/auth";
 import { db } from "@local-seo/db";
-import { businessLocations, businesses } from "@local-seo/db/schema";
-import { eq } from "drizzle-orm";
+import { businessLocations, businesses, businessVisibilitySnapshots } from "@local-seo/db/schema";
+import { desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+
+const METRIC_LABEL: Record<string, string> = {
+  map_pack_position: "Map-pack position",
+  profile_views: "Profile views",
+  search_views: "Search views",
+  website_clicks: "Website clicks",
+  call_clicks: "Call clicks",
+  direction_requests: "Direction requests",
+};
 
 export default async function LocalVisibilityPage({
   searchParams,
@@ -50,6 +60,13 @@ export default async function LocalVisibilityPage({
     .from(businessLocations)
     .where(eq(businessLocations.businessId, selected.id))
     .limit(1);
+
+  const snapshots = await db
+    .select()
+    .from(businessVisibilitySnapshots)
+    .where(eq(businessVisibilitySnapshots.businessId, selected.id))
+    .orderBy(desc(businessVisibilitySnapshots.capturedAt))
+    .limit(20);
 
   return (
     <AppShell>
@@ -105,11 +122,42 @@ export default async function LocalVisibilityPage({
           <CardHeader>
             <CardTitle>Map-pack / Google Business Profile visibility</CardTitle>
           </CardHeader>
-          <CardContent className="text-muted-foreground text-sm">
-            Not available yet. Google Business Profile APIs require separate developer access
-            approval from Google (docs/integrations.md) — this isn't a missing feature so much as a
-            pending external dependency. No ranking, map-pack position, or visibility data is
-            fabricated in the meantime.
+          <CardContent className="text-muted-foreground space-y-4 text-sm">
+            <p>
+              No automated sync yet — Google Business Profile APIs require separate developer
+              access approval from Google (docs/integrations.md), which is free but not guaranteed
+              or instant. Until it's approved, log what you see in your own GBP dashboard (or a
+              manual map-pack search) below; nothing here is fabricated, and once GBP access is
+              approved this same table starts filling in automatically.
+            </p>
+            {snapshots.length === 0 ? (
+              <p>No snapshots logged yet.</p>
+            ) : (
+              <ul className="divide-border divide-y">
+                {snapshots.map((snapshot) => (
+                  <li key={snapshot.id} className="flex items-center justify-between gap-4 py-2">
+                    <span className="text-foreground">
+                      {METRIC_LABEL[snapshot.metricType] ?? snapshot.metricType}
+                      {snapshot.keyword ? ` — "${snapshot.keyword}"` : ""}
+                    </span>
+                    <span>
+                      <span className="text-foreground font-medium">{snapshot.value}</span>{" "}
+                      {snapshot.unit ?? ""} ·{" "}
+                      {snapshot.capturedAt.toLocaleDateString("en-PH", { dateStyle: "medium" })}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>Log a visibility snapshot</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <AddVisibilitySnapshotForm businessId={selected.id} />
           </CardContent>
         </Card>
       </div>
