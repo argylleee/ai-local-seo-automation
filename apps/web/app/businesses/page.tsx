@@ -1,10 +1,10 @@
+import { CreateBusinessForm } from "@/components/create-business-form";
 import { AppShell } from "@/components/app-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CreateBusinessForm } from "@/components/create-business-form";
 import { auth } from "@/lib/auth";
 import { db } from "@local-seo/db";
-import { businesses } from "@local-seo/db/schema";
-import { eq } from "drizzle-orm";
+import { businesses, seoAudits } from "@local-seo/db/schema";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { redirect } from "next/navigation";
 
 export default async function BusinessesPage() {
@@ -17,6 +17,22 @@ export default async function BusinessesPage() {
     .select({ id: businesses.id, name: businesses.name, category: businesses.category })
     .from(businesses)
     .where(eq(businesses.organizationId, session.organizationId));
+
+  const businessIds = orgBusinesses.map((business) => business.id);
+  const latestScoreByBusiness = new Map<string, string>();
+  if (businessIds.length > 0) {
+    const completedAudits = await db
+      .select({ businessId: seoAudits.businessId, score: seoAudits.score })
+      .from(seoAudits)
+      .where(and(inArray(seoAudits.businessId, businessIds), eq(seoAudits.status, "completed")))
+      .orderBy(desc(seoAudits.completedAt));
+    // First match per business wins — already ordered most-recent-first.
+    for (const audit of completedAudits) {
+      if (!latestScoreByBusiness.has(audit.businessId) && audit.score) {
+        latestScoreByBusiness.set(audit.businessId, audit.score);
+      }
+    }
+  }
 
   return (
     <AppShell>
@@ -31,7 +47,12 @@ export default async function BusinessesPage() {
                   <CardTitle>{business.name}</CardTitle>
                 </CardHeader>
                 <CardContent className="text-muted-foreground text-sm">
-                  {business.category ?? "No category set"}
+                  <p>{business.category ?? "No category set"}</p>
+                  <p className="mt-1">
+                    {latestScoreByBusiness.has(business.id)
+                      ? `Local SEO score: ${latestScoreByBusiness.get(business.id)}`
+                      : "No audits have run yet"}
+                  </p>
                 </CardContent>
               </Card>
             ))}

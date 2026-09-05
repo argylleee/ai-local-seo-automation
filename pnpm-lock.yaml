@@ -69,6 +69,9 @@ importers:
       '@local-seo/schemas':
         specifier: workspace:*
         version: link:../../packages/schemas
+      '@local-seo/seo-engine':
+        specifier: workspace:*
+        version: link:../../packages/seo-engine
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
