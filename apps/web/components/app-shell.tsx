@@ -7,12 +7,13 @@ import type { ReactNode } from "react";
 
 // Primary navigation per docs/design.md. Only routes that exist today are
 // listed — the rest of the documented nav (Local Visibility, Keywords,
-// Website Audit, Reviews, Competitors, Recommendations, Reports,
-// Integrations) is added as each feature module is built, rather than
-// linking to pages that don't exist yet.
+// Website Audit, Reviews, Competitors, Reports, Integrations) is added
+// as each feature module is built, rather than linking to pages that
+// don't exist yet.
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Overview" },
   { href: "/businesses", label: "Businesses" },
+  { href: "/recommendations", label: "Recommendations" },
   { href: "/settings", label: "Settings" },
 ];
 
