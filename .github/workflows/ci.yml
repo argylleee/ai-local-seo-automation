@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# docs/development-workflow.md's "Before merge" checklist:
+# typecheck, lint, unit tests, integration tests, build.
+env:
+  DATABASE_URL: postgres://postgres:postgres@localhost:5432/local_seo_ci
+  AUTH_SECRET: ci-placeholder-not-a-real-secret
+  APP_URL: http://localhost:3000
+  GOOGLE_CLIENT_ID: ci-placeholder-client-id
+  GOOGLE_CLIENT_SECRET: ci-placeholder-client-secret
+  TOKEN_ENCRYPTION_KEY: YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=
+  PAGESPEED_API_KEY: ci-placeholder-pagespeed-key
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: local_seo_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.22.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Unit tests
+        run: pnpm run test
+
+      - name: Run database migrations
+        run: pnpm --filter @local-seo/db run db:migrate
+
+      - name: Integration tests
+        run: pnpm run test:integration
+
+      - name: Build
+        run: pnpm run build
