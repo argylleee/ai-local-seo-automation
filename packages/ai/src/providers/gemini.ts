@@ -3,8 +3,8 @@ const DEFAULT_MODEL = "gemini-flash-latest";
 export class GeminiUnavailableError extends Error {}
 
 /**
- * Calls Gemini's free tier (docs/free-tooling.md preference order:
- * Gemini free tier -> Ollama -> deterministic fallback). Requests JSON
+ * Calls Gemini's free tier — the second link in docs/free-tooling.md's
+ * chain (Groq -> Gemini -> Ollama -> deterministic). Requests JSON
  * output directly; the caller is still responsible for validating the
  * result against a schema — this only guarantees valid JSON syntax, not
  * a particular shape (docs/security.md: "Treat model output as

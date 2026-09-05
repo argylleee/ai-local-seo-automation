@@ -4,10 +4,10 @@ const DEFAULT_MODEL = "llama3.1";
 export class OllamaUnavailableError extends Error {}
 
 /**
- * Calls a local Ollama instance — the second link in docs/free-tooling.md's
- * AI fallback chain (Gemini -> Ollama -> deterministic). Same contract
- * as callGemini: guarantees valid JSON syntax only, never a specific
- * shape.
+ * Calls a local Ollama instance — the third link in docs/free-tooling.md's
+ * AI fallback chain (Groq -> Gemini -> Ollama -> deterministic). Same
+ * contract as callGemini/callGroq: guarantees valid JSON syntax only,
+ * never a specific shape.
  */
 export async function callOllama(prompt: string): Promise<unknown> {
   const baseUrl = process.env.OLLAMA_BASE_URL ?? DEFAULT_BASE_URL;

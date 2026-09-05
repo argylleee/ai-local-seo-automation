@@ -17,6 +17,7 @@ This is the default development baseline.
 - Google Search Console API
 - Google Business Profile APIs, subject to access approval
 - PageSpeed Insights API
+- Groq free developer tier (no credit card required) for development/testing
 - Gemini API free tier for development/testing
 - OpenStreetMap data where licensing/usage requirements are followed
 - local crawler implementation
@@ -48,6 +49,8 @@ If a proposed dependency requires payment:
 Preferred:
 
 ```text
+Groq free tier
+     ↓ unavailable/rate-limited
 Gemini free tier
      ↓ unavailable/quota exceeded
 Ollama local model
